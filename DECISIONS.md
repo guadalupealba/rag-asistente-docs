@@ -14,7 +14,7 @@ Se eligió Python como lenguaje principal del backend porque:
 ## 2. Por qué Gemini API (+ Groq como fallback)
 
 Alternativas evaluadas:
-- Groq: se consideró primero por su velocidad de inferencia y nivel gratuito sin tarjeta de crédito
+- Groq: se consideró primero por su velocidad de inferencia y nivel gratuito 
 - Gemini API: elegida como proveedor principal
 - Ollama (local): gratis y sin límites, pero más lento y requiere buena RAM
 
