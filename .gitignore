@@ -39,3 +39,5 @@ Thumbs.db
 build/
 dist/
 *.egg-info/
+# Datos descargados/procesados (se regeneran con los scripts)
+backend/data/
