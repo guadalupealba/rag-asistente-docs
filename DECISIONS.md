@@ -6,10 +6,10 @@ Este documento registra las decisiones técnicas tomadas durante el desarrollo, 
 
 ## 1. Por qué Python
 
-Uno de los integrantes viene de Java, pero se eligió Python porque:
+Se eligió Python como lenguaje principal del backend porque:
 - Es el estándar de facto para proyectos de IA/RAG
 - Tiene el ecosistema más maduro de librerías (LangChain, LlamaIndex, embeddings, etc.)
-- Facilita la colaboración en equipo sobre un stack más estandarizado en la industria de IA
+- Facilita la colaboración en equipo sobre un stack estandarizado en la industria de IA
 
 ## 2. Por qué Gemini API (+ Groq como fallback)
 
