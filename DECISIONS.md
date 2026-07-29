@@ -11,14 +11,20 @@ Uno de los integrantes viene de Java, pero se eligió Python porque:
 - Tiene el ecosistema más maduro de librerías (LangChain, LlamaIndex, embeddings, etc.)
 - Facilita la colaboración en equipo sobre un stack más estandarizado en la industria de IA
 
-## 2. ¿Por qué Groq como API de IA?
+## 2. ¿Por qué Gemini API (+ Groq como fallback)?
 
 Alternativas evaluadas:
-- **Groq** ✅ — elegida
-- Gemini API — también gratis con límites
+- **Groq** — se consideró primero por su velocidad de inferencia
+- **Gemini API** ✅ — elegida como proveedor principal
 - Ollama (local) — gratis y sin límites, pero más lento y requiere buena RAM
 
-Motivo de la elección: nivel gratuito sin necesidad de tarjeta de crédito, velocidad de inferencia muy alta, y fácil integración con Python.
+Motivo del cambio: se evaluó Groq inicialmente por su velocidad, pero se decidió pasar a Gemini por consistencia de conocimiento dentro del equipo (uno de los integrantes ya tenía experiencia previa con esta API) y para reducir la fricción de arranque conjunto del proyecto.
+
+**Decisión de equipo:** en vez de elegir uno solo, se decidió usar **ambos proveedores**:
+- **Fase 1 (arranque):** implementar el flujo completo del RAG usando solo Gemini, para tener algo funcional rápido
+- **Fase 2 (mejora):** agregar Groq como fallback automático (si Gemini falla por rate limit o error, el sistema cae a Groq) y/o como comparador de respuestas en la interfaz
+
+Esto permite documentar una evolución real del proyecto y demuestra manejo de resiliencia entre proveedores de IA, algo valorado en sistemas de producción.
 
 ## 3. Base de datos vectorial
 
