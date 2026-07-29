@@ -1,0 +1,41 @@
+# Variables de entorno (nunca subir claves/API keys)
+.env
+.env.local
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+env/
+venv/
+.venv/
+ENV/
+pip-log.txt
+pip-delete-this-directory.txt
+
+# Bases de datos vectoriales locales / cache
+*.sqlite3
+*.db
+chroma_db/
+chroma/
+.chroma/
+
+# Jupyter
+.ipynb_checkpoints
+
+# Editor / OS
+.vscode/
+.idea/
+*.swp
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+
+# Distribución / build
+build/
+dist/
+*.egg-info/
