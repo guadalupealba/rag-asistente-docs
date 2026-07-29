@@ -15,7 +15,7 @@ Uno de los integrantes viene de Java, pero se eligió Python porque:
 
 Alternativas evaluadas:
 - **Groq** — se consideró primero por su velocidad de inferencia
-- **Gemini API** ✅ — elegida como proveedor principal
+- **Gemini API**  — elegida como proveedor principal
 - Ollama (local) — gratis y sin límites, pero más lento y requiere buena RAM
 
 Motivo del cambio: se evaluó Groq inicialmente por su velocidad, pero se decidió pasar a Gemini por consistencia de conocimiento dentro del equipo (uno de los integrantes ya tenía experiencia previa con esta API) y para reducir la fricción de arranque conjunto del proyecto.
