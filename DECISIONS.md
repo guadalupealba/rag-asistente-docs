@@ -28,11 +28,11 @@ Esto permite documentar una evolución real del proyecto y demuestra manejo de r
 
 ## 3. Base de datos vectorial
 
-_Pendiente de decidir entre:_
-- **pgvector** (extensión de PostgreSQL)
-- **ChromaDB** (base vectorial standalone, más simple para empezar)
+Motivo de la elección: se optó por pgvector (extensión de PostgreSQL) por razones técnicas concretas:
+- **Menos infraestructura**: no requiere un servicio de base de datos separado; los embeddings viven en el mismo PostgreSQL donde se guardan los demás datos del proyecto
+- **Consistencia transaccional**: los chunks de texto, sus embeddings y su metadata (ej. de qué sección de la doc de Stripe provienen) se guardan en la misma transacción, evitando desincronización entre datos relacionales y vectoriales
+- **Búsquedas híbridas**: permite combinar filtros SQL tradicionales (ej. `WHERE seccion = 'Payments'`) con búsqueda por similitud vectorial en una sola query
 
-_Completar acá el motivo final de la elección una vez decidido._
 
 ## 4. Estrategia de chunking (troceo de documentos)
 
