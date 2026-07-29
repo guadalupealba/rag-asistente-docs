@@ -4,45 +4,74 @@ Este documento registra las decisiones técnicas tomadas durante el desarrollo, 
 
 ---
 
-## 1. ¿Por qué Python?
+## 1. Por qué Python
 
-Uno de los integrantes viene de Java, pero se eligió Python porque:
+Se eligió Python como lenguaje principal del backend porque:
 - Es el estándar de facto para proyectos de IA/RAG
 - Tiene el ecosistema más maduro de librerías (LangChain, LlamaIndex, embeddings, etc.)
-- Facilita la colaboración en equipo sobre un stack más estandarizado en la industria de IA
+- Facilita la colaboración en equipo sobre un stack estandarizado en la industria de IA
 
-## 2. ¿Por qué Groq como API de IA?
+## 2. Por qué Gemini API (+ Groq como fallback)
 
 Alternativas evaluadas:
-- **Groq** ✅ — elegida
-- Gemini API — también gratis con límites
-- Ollama (local) — gratis y sin límites, pero más lento y requiere buena RAM
+- Groq: se consideró primero por su velocidad de inferencia y nivel gratuito 
+- Gemini API: elegida como proveedor principal
+- Ollama (local): gratis y sin límites, pero más lento y requiere buena RAM
 
-Motivo de la elección: nivel gratuito sin necesidad de tarjeta de crédito, velocidad de inferencia muy alta, y fácil integración con Python.
+Motivo del cambio: se evaluó Groq inicialmente por su velocidad, pero se decidió pasar a Gemini por consistencia de conocimiento dentro del equipo (uno de los integrantes ya tenía experiencia previa con esta API) y para reducir la fricción de arranque conjunto del proyecto.
 
-## 3. Base de datos vectorial
+Decisión de equipo: en vez de elegir uno solo, se decidió usar ambos proveedores:
+- Fase 1 (arranque): implementar el flujo completo del RAG usando solo Gemini, para tener algo funcional rápido
+- Fase 2 (mejora): agregar Groq como fallback automático (si Gemini falla por rate limit o error, el sistema cae a Groq) y/o como comparador de respuestas en la interfaz
 
-_Pendiente de decidir entre:_
-- **pgvector** (extensión de PostgreSQL)
-- **ChromaDB** (base vectorial standalone, más simple para empezar)
+Esto permite documentar una evolución real del proyecto y demuestra manejo de resiliencia entre proveedores de IA, algo valorado en sistemas de producción.
 
-_Completar acá el motivo final de la elección una vez decidido._
+## 3. Dominio de datos
 
-## 4. Estrategia de chunking (troceo de documentos)
+Se eligió la documentación pública de la API de Stripe (https://docs.stripe.com) como fuente de conocimiento del asistente.
 
-_Pendiente de definir:_
-- Tamaño de chunk (`CHUNK_SIZE`)
-- Overlap entre chunks (`CHUNK_OVERLAP`)
+Motivo de la elección:
+- Es un dominio inmediatamente reconocible para reclutadores y devs (a diferencia de un dominio muy nicho)
+- Documentación pública, bien estructurada y de volumen suficiente para justificar chunking real
+- Permite demos en vivo con preguntas técnicas concretas (ej. "cómo creo un customer con metadata")
+- Refuerza el mensaje del proyecto: un asistente que ahorra tiempo de lectura de documentación técnica
+
+Alcance inicial: (completar cuando se decida qué secciones específicas de la doc se van a indexar, ej. Payments, Customers, Webhooks, etc.)
+
+## 4. Base de datos vectorial
+
+Alternativas evaluadas:
+- pgvector: elegida
+- ChromaDB: más simple de levantar, pero menos alineada con stack de producción
+
+Motivo de la elección: se optó por pgvector (extensión de PostgreSQL) por razones técnicas concretas:
+- Menos infraestructura: no requiere un servicio de base de datos separado; los embeddings viven en el mismo PostgreSQL donde se guardan los demás datos del proyecto
+- Consistencia transaccional: los chunks de texto, sus embeddings y su metadata (ej. de qué sección de la doc de Stripe provienen) se guardan en la misma transacción, evitando desincronización entre datos relacionales y vectoriales
+- Búsquedas híbridas: permite combinar filtros SQL tradicionales (ej. WHERE seccion = 'Payments') con búsqueda por similitud vectorial en una sola query
+
+Setup necesario: correr PostgreSQL con la extensión pgvector habilitada (vía Docker, imagen ankane/pgvector o similar), y activar la extensión con CREATE EXTENSION vector;.
+
+## 5. Estrategia de chunking (troceo de documentos)
+
+Pendiente de definir:
+- Tamaño de chunk (CHUNK_SIZE)
+- Overlap entre chunks (CHUNK_OVERLAP)
 - Estrategia (por párrafos, por tokens, semántico, etc.)
 
-## 5. Frontend
+## 6. Frontend
 
-_Pendiente de decidir._
+Se eligió Streamlit como framework de frontend.
 
-## 6. Deploy
+Motivo de la elección:
+- Se escribe 100% en Python, sin necesidad de HTML/CSS/JS, lo que permite enfocar el esfuerzo de desarrollo en la lógica del RAG (retrieval + generación) en vez de en la interfaz
+- Es el estándar de facto para demos de proyectos de IA/ML, fácilmente reconocible por reclutadores técnicos
+- Permite armar rápidamente una interfaz de chat funcional, con historial de mensajes y visualización de la fuente citada debajo de cada respuesta
+- Deploy simple y gratuito (Streamlit Community Cloud, o junto al backend en Railway/Render)
 
-_Pendiente. Candidatos: Railway, Render._
+## 7. Deploy
 
-## 7. Problemas encontrados
+Pendiente. Candidatos: Railway, Render.
 
-_Ir completando acá a medida que surjan bugs, limitaciones o decisiones de último momento que valga la pena documentar (ej. rate limits de la API, problemas de precisión en las respuestas, tiempos de indexado, etc.)_
+## 8. Problemas encontrados
+
+Ir completando acá a medida que surjan bugs, limitaciones o decisiones de último momento que valga la pena documentar (ej. rate limits de la API, problemas de precisión en las respuestas, tiempos de indexado, etc.)
