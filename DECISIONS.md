@@ -49,14 +49,11 @@ Motivo de la elección: se optó por pgvector (extensión de PostgreSQL) por raz
 - Consistencia transaccional: los chunks de texto, sus embeddings y su metadata (ej. de qué sección de la doc de Stripe provienen) se guardan en la misma transacción, evitando desincronización entre datos relacionales y vectoriales
 - Búsquedas híbridas: permite combinar filtros SQL tradicionales (ej. WHERE seccion = 'Payments') con búsqueda por similitud vectorial en una sola query
 
-Setup necesario: correr PostgreSQL con la extensión pgvector habilitada (vía Docker, imagen ankane/pgvector o similar), y activar la extensión con CREATE EXTENSION vector;.
+Setup necesario: inicialmente se planeó usar Docker (imagen pgvector/pgvector) para levantar PostgreSQL + pgvector rápidamente. Sin embargo, Docker Desktop requiere soporte de virtualización habilitado en el BIOS, que no estaba disponible en el equipo de desarrollo. Se optó entonces por una alternativa igual de simple: Conda, que permite instalar PostgreSQL y pgvector ya compilados juntos con un solo comando (conda install -c conda-forge postgresql pgvector), sin depender de virtualización ni de compilar la extensión manualmente. Este cambio se documenta en la sección de Problemas encontrados.
 
 ## 5. Estrategia de chunking (troceo de documentos)
 
-Pendiente de definir:
-- Tamaño de chunk (CHUNK_SIZE)
-- Overlap entre chunks (CHUNK_OVERLAP)
-- Estrategia (por párrafos, por tokens, semántico, etc.)
+Se decidió trocear la documentación por endpoint de la API (cada combinación de ruta + método HTTP genera un chunk), en vez de usar un tamaño fijo de caracteres o tokens. Esto es posible porque la especificación OpenAPI de Stripe ya viene naturalmente segmentada por endpoint, y cada uno constituye una unidad de información autocontenida (ideal para RAG, ya que cada chunk responde a una pregunta concreta sobre un endpoint específico).
 
 ## 6. Frontend
 
@@ -74,4 +71,6 @@ Pendiente. Candidatos: Railway, Render.
 
 ## 8. Problemas encontrados
 
-Ir completando acá a medida que surjan bugs, limitaciones o decisiones de último momento que valga la pena documentar (ej. rate limits de la API, problemas de precisión en las respuestas, tiempos de indexado, etc.)
+- Docker Desktop no pudo levantarse por falta de soporte de virtualización en el BIOS del equipo. Se resolvió instalando PostgreSQL + pgvector vía Conda en su lugar, evitando la dependencia de virtualización.
+- Las claves de API de Gemini generadas después de mediados de 2026 vienen en un nuevo formato (empiezan con "AQ." en vez de "AIzaSy..."). El SDK oficial (google-genai) las soporta sin problema; el error inicial fue simplemente no haber guardado la clave real en el archivo .env (había quedado el texto de ejemplo).
+- Estrategia de chunking: en vez de definir un tamaño de chunk fijo (caracteres/tokens), se optó por trocear por endpoint de la API (cada ruta + método HTTP = un chunk), ya que la especificación OpenAPI de Stripe ya viene naturalmente segmentada de esa forma y cada endpoint es una unidad de información autocontenida.
