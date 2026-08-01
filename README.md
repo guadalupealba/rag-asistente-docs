@@ -31,33 +31,39 @@ Casos de uso de ejemplo:
 Ver el razonamiento completo detrás de cada elección en DECISIONS.md.
 
 ## Cómo correrlo (local)
-
+* 1. Clonar el repo
 ```bash
-# 1. Clonar el repo
 git clone https://github.com/guadalupealba/rag-asistente-docs.git
 cd rag-asistente-docs
+```
 
-# 2. Crear entorno virtual
-python -m venv venv
-source venv/bin/activate  # En Windows: venv\Scripts\activate
+* 2. Descargar Miniconda
+```bash
+A=$(uname -m) && F=$([ "$A" = aarch64 ] && echo aarch64 || [ "$A" = x86_64 ] && echo x86_64 || echo armv7l) && wget "https://repo.anaconda.com/miniconda/Miniconda3-latest-Linux-$F.sh" -O miniconda.sh && bash miniconda.sh -b -p "$HOME/miniconda3" && "$HOME/miniconda3/bin/conda" init bash
+ # Este comando de Linux hace la detección automática de la arquitectura del sistema y instalar la versión de miniconda adecuada
+```
 
-# 3. Instalar dependencias del backend
-cd backend
-pip install -r requirements.txt
-pip install requests google-genai psycopg2-binary python-dotenv
+* 3. Instalar dependencias
+```bash
+pip install -r requisitos.txt
+```
 
-# 4. Configurar variables de entorno
-cp .env.example .env
-# Completar .env con tu GEMINI_API_KEY real
+* 4. Guardar el API Gemini 
+```bash
+mkdir -p .secreto && echo '{"claves_gemini": "< el API de gemini aquí>"}' > .secreto/.claves_api.json
+```
 
 # 5. Levantar PostgreSQL + pgvector (via Conda)
+```bash
 conda create -n rag-db -c conda-forge postgresql pgvector -y
 conda activate rag-db
-initdb -D <ruta-que-elijas> -U postgres -W
-pg_ctl -D <esa-misma-ruta> -o "-p 5433" start
+initdb -D <RUTA QUE ELIJES> -U postgres -W
+pg_ctl -D <ESA MISMA RUTA> -o "-p 5433" start
 createdb -U postgres -p 5433 rag_stripe
 psql -U postgres -p 5433 -d rag_stripe -c "CREATE EXTENSION vector;"
+```
 
+```bash
 # 6. Descargar y procesar la documentacion de Stripe
 python descargar_stripe_docs.py
 
@@ -65,7 +71,7 @@ python descargar_stripe_docs.py
 python generar_embeddings.py
 
 # 8. Probar que la busqueda funciona
-python probar_busqueda.py "como creo un customer con metadata"
+python rag_ia.py "como creo un customer con metadata"
 
 # 9. Correr el servidor
 uvicorn main:app --reload
@@ -73,8 +79,8 @@ uvicorn main:app --reload
 
 ## Autores
 
-- Guadalupe Alba — [@guadalupealba](https://github.com/guadalupealba)
-- [@moneythemoney999](https://github.com/moneythemoney999)
+- Guadalupe Alba - [@guadalupealba](https://github.com/guadalupealba)
+- Mugen - [@moneythemoney999](https://github.com/moneythemoney999)
 
 ## Demo
 

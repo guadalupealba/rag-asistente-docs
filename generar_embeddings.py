@@ -4,8 +4,6 @@ y guardarlos en PostgreSQL (con la extensión pgvector).
 
 Requisitos previos:
     - Haber corrido descargar_stripe_docs.py (genera data/chunks.json)
-    - Tener un archivo .env en esta misma carpeta con:
-        GEMINI_API_KEY=tu_clave
     - Tener PostgreSQL + pgvector corriendo (ver DECISIONS.md para el setup)
 
 Uso:
@@ -16,31 +14,34 @@ import json
 import os
 
 import psycopg2
-from dotenv import load_dotenv
 from google import genai
-from google.genai.types import EmbedContentConfig
-
-# Cargar variables de entorno desde .env
-load_dotenv()
+from google.genai import types
 
 # --- Configuración ---
-CHUNKS_PATH = os.path.join("data", "chunks.json")
-MODELO_EMBEDDING = "gemini-embedding-001"
-DIMENSIONES = 768  # Recortamos de 3072 a 768 para que sea más liviano y rápido
+ruta_clave = ".secreto/claves_api.json"
+ruta_trozo = os.path.join("datos", "chunks.json")
+modele_de_embedding = "gemini-embedding-001"
+dimensiones = 768  # Recortamos de 3072 a 768 para que sea más liviano y rápido
 
 # Configuración de conexión a PostgreSQL (base local con pgvector, vía Conda)
-DB_CONFIG = {
-    "host": "localhost",
-    "port": 5433,
-    "dbname": "rag_stripe",
-    "user": "postgres",
-    "password": "rag1234",
+base_dato_config = {
+	"host": "localhost",
+	"port": 5433,
+	"dbname": "rag_stripe",
+	"user": "postgres",
+	"password": "rag1234",
 }
+
+def obtener_clave_api():
+    """Lee la clave de la API desde un archivo JSON."""
+    with open(ruta_clave, 'r') as archivo:
+        datos = json.load(archivo)
+    return datos["claves_gemini"]
 
 
 def cargar_chunks():
-    """Carga los chunks generados por descargar_stripe_docs.py"""
-    with open(CHUNKS_PATH, "r", encoding="utf-8") as f:
+    """Carga los chunks generados por descargar_stripe.py"""
+    with open(ruta_trozo, "r", encoding="utf-8") as f:
         return json.load(f)
 
 
@@ -53,24 +54,25 @@ def crear_tabla(conn):
                 texto TEXT NOT NULL,
                 fuente TEXT NOT NULL,
                 seccion TEXT,
-                embedding vector({DIMENSIONES})
+                embedding vector({dimensiones})
             );
         """)
     conn.commit()
     print("Tabla 'stripe_chunks' lista.")
 
-
 def generar_embedding(cliente, texto):
     """Genera el embedding de un texto usando la API de Gemini."""
     resultado = cliente.models.embed_content(
-        model=MODELO_EMBEDDING,
-        contents=texto,
-        config=EmbedContentConfig(
+        model=modele_de_embedding,
+        contents=[texto],
+        config=types.EmbedContentConfig(
             task_type="RETRIEVAL_DOCUMENT",
-            output_dimensionality=DIMENSIONES,
+            output_dimensionality=dimensiones,
         ),
     )
-    return resultado.embeddings[0].values
+    return list(resultado.embeddings[0].values)
+
+
 
 
 def guardar_chunk(conn, chunk, embedding):
@@ -92,12 +94,7 @@ def guardar_chunk(conn, chunk, embedding):
 
 
 def main():
-    api_key = os.getenv("GEMINI_API_KEY")
-    if not api_key:
-        raise RuntimeError(
-            "No se encontró GEMINI_API_KEY. Revisá que el archivo .env "
-            "esté en esta carpeta y tenga la clave configurada."
-        )
+    api_key = obtener_clave_api()
 
     cliente = genai.Client(api_key=api_key)
 
@@ -105,12 +102,16 @@ def main():
     chunks = cargar_chunks()
     print(f"Se cargaron {len(chunks)} chunks.")
 
-    conn = psycopg2.connect(**DB_CONFIG)
+    conn = psycopg2.connect(**base_dato_config)
     crear_tabla(conn)
 
     for i, chunk in enumerate(chunks, start=1):
+        if not chunk.get("texto"):
+            print(f"[{i}/{len(chunks)}] Saltando chunk {chunk['id']} por texto nulo o vacío.")
+            continue
+            
         print(f"[{i}/{len(chunks)}] Generando embedding para: {chunk['id']}")
-        embedding = generar_embedding(cliente, chunk["texto"])
+        embedding = generar_embedding(cliente, [chunk["texto"]])
         guardar_chunk(conn, chunk, embedding)
 
     conn.close()
