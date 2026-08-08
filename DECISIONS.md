@@ -14,7 +14,7 @@ Se eligió Python como lenguaje principal del backend porque:
 ## 2. Por qué Gemini API (+ Groq como fallback)
 
 Alternativas evaluadas:
-- Groq: se consideró primero por su velocidad de inferencia y nivel gratuito 
+- Groq: se consideró primero por su velocidad de inferencia y nivel gratuito
 - Gemini API: elegida como proveedor principal
 - Ollama (local): gratis y sin límites, pero más lento y requiere buena RAM
 
@@ -22,9 +22,11 @@ Motivo del cambio: se evaluó Groq inicialmente por su velocidad, pero se decidi
 
 Decisión de equipo: en vez de elegir uno solo, se decidió usar ambos proveedores:
 - Fase 1 (arranque): implementar el flujo completo del RAG usando solo Gemini, para tener algo funcional rápido
-- Fase 2 (mejora): agregar Groq como fallback automático (si Gemini falla por rate limit o error, el sistema cae a Groq) y/o como comparador de respuestas en la interfaz
+- Fase 2 (mejora): agregar Groq como opción adicional, con un campo en la respuesta del backend que identifica qué modelo generó cada respuesta, y un selector en el frontend para que el usuario elija entre Gemini y Groq
 
 Esto permite documentar una evolución real del proyecto y demuestra manejo de resiliencia entre proveedores de IA, algo valorado en sistemas de producción.
+
+Estado: la Fase 1 está completa y en producción. La Fase 2 (integración de Groq) está en desarrollo activo.
 
 ## 3. Dominio de datos
 
