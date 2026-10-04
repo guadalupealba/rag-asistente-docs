@@ -2,6 +2,10 @@
 
 Asistente conversacional basado en RAG (Retrieval-Augmented Generation) que responde preguntas sobre un conjunto de documentos reales, citando la fuente exacta en vez de inventar respuestas.
 
+[![Video demo: el asistente responde preguntas sobre la API de Stripe y cita las fuentes consultadas (1:57)](docs/media/demo_chat_stripe_thumbnail.jpg)](docs/media/demo_chat_stripe.mp4 "Ver el video demo (1:57)")
+
+<sub>▶ Clic en la imagen para ver el video demo (1:57). Pruébalo en vivo en https://rag-asistente-docs.onrender.com</sub>
+
 ## Objetivo del proyecto
 
 Este proyecto fue creado como pieza de portafolio para búsqueda de empleo en IT (2026). Busca demostrar:
@@ -34,18 +38,18 @@ Ver el razonamiento completo detrás de cada elección en DECISIONS.md.
 
 La forma más simple es con Docker (ver guía completa en DEPLOY.md):
 
-\`\`\`bash
+```bash
 git clone https://github.com/guadalupealba/rag-asistente-docs.git
 cd rag-asistente-docs
 export GEMINI_API_KEY="tu_api_key"
 docker build --secret id=GEMINI_API_KEY,env=GEMINI_API_KEY -t rag-demo .
 docker run --rm -e GEMINI_API_KEY -p 7860:7860 rag-demo
 # abrir http://localhost:7860
-\`\`\`
+```
 
 También se puede correr manualmente, sin Docker:
 
-\`\`\`bash
+```bash
 # 1. Clonar el repo
 git clone https://github.com/guadalupealba/rag-asistente-docs.git
 cd rag-asistente-docs/backend
@@ -79,7 +83,7 @@ python probar_busqueda.py "como creo un customer con metadata"
 
 # 8. Correr la interfaz
 streamlit run UI.py
-\`\`\`
+```
 
 Demo en vivo: https://rag-asistente-docs.onrender.com
 
@@ -94,4 +98,4 @@ Demo en vivo: https://rag-asistente-docs.onrender.com
 
 - Demo en vivo: https://rag-asistente-docs.onrender.com (plan Free de Render: si estuvo inactiva, tarda alrededor de 1 minuto en despertar)
 - Cómo desplegar tu propia demo: ver [DEPLOY.md](DEPLOY.md)
-- Pendiente: link al video demo de 2 minutos
+- Video demo (1:57): [docs/media/demo_chat_stripe.mp4](docs/media/demo_chat_stripe.mp4)
