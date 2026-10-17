@@ -2,9 +2,9 @@
 
 Asistente conversacional basado en RAG (Retrieval-Augmented Generation) que responde preguntas sobre un conjunto de documentos reales, citando la fuente exacta en vez de inventar respuestas.
 
-[![Video demo: el asistente responde preguntas sobre la API de Stripe y cita las fuentes consultadas (1:57)](docs/media/demo_chat_stripe_thumbnail.jpg)](docs/media/demo_chat_stripe.mp4 "Ver el video demo (1:57)")
+[![Video demo: el asistente responde preguntas sobre la API de Stripe y cita las fuentes consultadas (1:57)](docs/media/demo_chat_stripe_thumbnail.jpg)](https://youtu.be/oCbj0ahAuoA "Ver el video demo (1:57)")
 
-<sub>▶ Clic en la imagen para ver el video demo (1:57). Pruébalo en vivo en https://rag-asistente-docs.onrender.com</sub>
+<sub>Clic en la imagen para ver el video demo (1:57). Pruébalo en vivo en https://rag-asistente-docs.onrender.com</sub>
 
 ## Objetivo del proyecto
 
@@ -26,7 +26,7 @@ Casos de uso de ejemplo:
 
 | Componente | Elección | Estado |
 |---|---|---|
-| Backend | Python (FastAPI) | Decidido |
+| Backend | Python (rag_ia.py: búsqueda de fragmentos y generación de la respuesta) | Decidido |
 | API de IA | Gemini (+ Groq como fallback, fase 2) | Decidido |
 | Base de datos vectorial | pgvector | Decidido |
 | Frontend | Streamlit | Decidido |
@@ -47,45 +47,39 @@ docker run --rm -e GEMINI_API_KEY -p 7860:7860 rag-demo
 # abrir http://localhost:7860
 ```
 
-También se puede correr manualmente, sin Docker:
+También se puede correr manualmente, sin Docker. Se necesita Conda (para PostgreSQL + pgvector) y dos terminales: una con Conda para la base (paso 3) y otra con el entorno virtual para el resto.
 
 ```bash
 # 1. Clonar el repo
 git clone https://github.com/guadalupealba/rag-asistente-docs.git
-cd rag-asistente-docs/backend
+cd rag-asistente-docs
 
 # 2. Crear entorno virtual e instalar dependencias
 python -m venv venv
 source venv/bin/activate  # En Windows: venv\Scripts\activate
-pip install -r requirements.txt
-pip install requests google-genai psycopg2-binary python-dotenv streamlit
+pip install -r requisitos.txt streamlit
 
-# 3. Configurar variables de entorno
-cp .env.example .env
-# Completar .env con tu GEMINI_API_KEY real
-
-# 4. Levantar PostgreSQL + pgvector (via Conda)
+# 3. Levantar PostgreSQL + pgvector (via Conda, en otra terminal)
 conda create -n rag-db -c conda-forge postgresql pgvector -y
 conda activate rag-db
-initdb -D <ruta-que-elijas> -U postgres -W
+initdb -D <ruta-que-elijas> -U postgres -W   # usar la contraseña rag1234 (la que esperan los scripts)
 pg_ctl -D <esa-misma-ruta> -o "-p 5433" start
 createdb -U postgres -p 5433 rag_stripe
 psql -U postgres -p 5433 -d rag_stripe -c "CREATE EXTENSION vector;"
 
-# 5. Descargar y procesar la documentacion de Stripe
+# 4. Configurar la clave de Gemini: crear el archivo .secreto/claves_api.json con
+# {"claves_gemini": "tu_api_key"}
+# (la carpeta .secreto/ está en el .gitignore, la clave no se sube al repo)
+
+# 5. Descargar y procesar la documentación de Stripe
 python descargar_stripe.py
 
 # 6. Generar embeddings y guardarlos en pgvector
 python generar_embeddings.py
 
-# 7. Probar que la busqueda funciona
-python probar_busqueda.py "como creo un customer con metadata"
-
-# 8. Correr la interfaz
+# 7. Correr la interfaz
 streamlit run UI.py
 ```
-
-Demo en vivo: https://rag-asistente-docs.onrender.com
 
 ## Autores
 
@@ -98,4 +92,4 @@ Demo en vivo: https://rag-asistente-docs.onrender.com
 
 - Demo en vivo: https://rag-asistente-docs.onrender.com (plan Free de Render: si estuvo inactiva, tarda alrededor de 1 minuto en despertar)
 - Cómo desplegar tu propia demo: ver [DEPLOY.md](DEPLOY.md)
-- Video demo (1:57): [docs/media/demo_chat_stripe.mp4](docs/media/demo_chat_stripe.mp4)
+- Video demo (1:57): https://youtu.be/oCbj0ahAuoA
