@@ -27,6 +27,14 @@ palabras_filtro = [
 	"webhook_endpoint",
 ]
 
+# Rutas de la API legacy (Sources/Cards/Bank accounts), reemplazada por PaymentMethods.
+# Se excluyen para que el asistente no recomiende APIs viejas. Editar la lista si se quiere incluir alguna.
+rutas_legacy = [
+	"/sources",
+	"/cards",
+	"/bank_accounts",
+]
+
 
 def leer_version_local():
 	"""Devuelve la versión (info.version) del spec3.json local, o None si no hay uno válido."""
@@ -78,6 +86,14 @@ def endpoint_es_relevante(ruta):
 	return any(palabra in ruta_lower for palabra in palabras_filtro)
 
 
+def endpoint_es_vigente(ruta, operacion):
+	"""Devuelve False si Stripe marca el endpoint como obsoleto (deprecated) o si es de la API legacy."""
+	if operacion.get("deprecated"):
+		return False
+	ruta_lower = ruta.lower()
+	return not any(legacy in ruta_lower for legacy in rutas_legacy)
+
+
 def construir_texto_chunk(ruta, metodo, operacion):
 	"""
 	Arma el texto de un chunk a partir de un endpoint de la especificación.
@@ -125,6 +141,10 @@ def procesar_spec():
 			for metodo, operacion in metodos.items():
 				# Nos aseguramos de que sea un método HTTP válido (get, post, delete, etc.)
 				if metodo.lower() not in ["get", "post", "put", "delete", "patch"]:
+					continue
+
+				# Saltear endpoints obsoletos o de la API legacy
+				if not endpoint_es_vigente(ruta, operacion):
 					continue
 
 				texto = construir_texto_chunk(ruta, metodo, operacion)
