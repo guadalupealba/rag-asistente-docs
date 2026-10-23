@@ -25,21 +25,34 @@ base_dato_config = {
 # Cargar la clave de la API
 def obtener_clave_api():
 	"""
-	Lee la clave de la API desde un archivo JSON.
+	Lee la clave de la API desde un archivo JSON o la solicita interactivamente si no existe.
 	"""
 	if not os.path.isfile(ruta_clave):
-		estilo_json = {
-			"claves_gemini": "<tu clave API aquí>"
+		print(f"No se encontró el archivo de claves en: {ruta_clave}")
+		clave_ingresada = input("Por favor, ingresa tu clave API de Gemini: ").strip()
+		
+		datos_json = {
+			"claves_gemini": clave_ingresada
 		}
-		os.makedirs(".secreto", exist_ok=True)
-		with open(".secreto/claves_api.json", "w", encoding="utf-8") as archivo:
-			json.dump(estilo_json, archivo, indent=4, ensure_ascii=False)
-		# Provocar un error y quitar el proceso
-		raise FileNotFoundError(f"No se encontró el archivo de claves: {ruta_clave}\n>> El archivo fue creado debes ir a ponerle la clave API. <<")
+		
+		os.makedirs(os.path.dirname(ruta_clave), exist_ok=True)
+		with open(ruta_clave, "w", encoding="utf-8") as archivo:
+			json.dump(datos_json, archivo, indent=4, ensure_ascii=False)
+		print(f"Clave guardada exitosamente en {ruta_clave}")
+		return clave_ingresada
 
 	with open(ruta_clave, "r", encoding="utf-8") as archivo:
 		datos = json.load(archivo)
-	return datos["claves_gemini"]
+		clave = datos.get("claves_gemini", "")
+		
+		if not clave or clave == "<tu clave API hier>" or clave == "<tu clave API aquí>":
+			clave_ingresada = input("El archivo de claves está vacío o sin configurar. Por favor, ingresa tu clave API de Gemini: ").strip()
+			datos["claves_gemini"] = clave_ingresada
+			with open(ruta_clave, "w", encoding="utf-8") as archivo_escritura:
+				json.dump(datos, archivo_escritura, indent=4, ensure_ascii=False)
+			return clave_ingresada
+			
+		return clave
 
 # Configurar el cliente de Gemini
 cliente = genai.Client(api_key=obtener_clave_api())
