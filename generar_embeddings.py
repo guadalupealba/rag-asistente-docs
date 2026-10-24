@@ -33,33 +33,10 @@ base_dato_config = {
 }
 
 def obtener_clave_api():
-    """Lee la clave de la API desde un archivo JSON o la solicita interactivamente si no existe."""
-    if not os.path.isfile(ruta_clave):
-        print(f"No se encontró el archivo de claves en: {ruta_clave}")
-        clave_ingresada = input("Por favor, ingresa tu clave API de Gemini: ").strip()
-        
-        datos_json = {
-            "claves_gemini": clave_ingresada
-        }
-        
-        os.makedirs(os.path.dirname(ruta_clave), exist_ok=True)
-        with open(ruta_clave, 'w', encoding='utf-8') as archivo:
-            json.dump(datos_json, archivo, indent=4, ensure_ascii=False)
-        print(f"Clave guardada exitosamente en {ruta_clave}")
-        return clave_ingresada
-
-    with open(ruta_clave, 'r', encoding='utf-8') as archivo:
+    """Lee la clave de la API desde un archivo JSON."""
+    with open(ruta_clave, 'r') as archivo:
         datos = json.load(archivo)
-        clave = datos.get("claves_gemini", "")
-        
-        if not clave or clave == "<tu clave API aquí>":
-            clave_ingresada = input("El archivo de claves está vacío o sin configurar. Por favor, ingresa tu clave API de Gemini: ").strip()
-            datos["claves_gemini"] = clave_ingresada
-            with open(ruta_clave, 'w', encoding='utf-8') as archivo_escritura:
-                json.dump(datos, archivo_escritura, indent=4, ensure_ascii=False)
-            return clave_ingresada
-            
-        return clave
+    return datos["claves_gemini"]
 
 
 def cargar_chunks():

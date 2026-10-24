@@ -2,3 +2,4 @@ google-genai
 psycopg2-binary
 requests
 groq
+streamlit
