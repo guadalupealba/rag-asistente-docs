@@ -87,7 +87,7 @@ with main_container:
         r = generar_respuesta({"pregunta": {"texto": pregunta, "historial": historial}})["respuesta"]
         resultado = {"respuesta": r["texto"], "fuentes": r["fuentes"] or {}, "modelo": r["modelo_de_ia"]["modelo"]}
         if r.get("errores"):
-            resultado["errores"] = {"modelo_error": next(iter(r["errores"].values()))}
+            resultado["errores"] = {"NIGUN_MODELO_RESPONDIO": next(iter(r["errores"].values()))}
         return resultado
 
 #*for_para_los_mensajes_del_historial................................................................................./
@@ -158,7 +158,7 @@ if (enviado and pregunta) or texto_defecto:
             except Exception as e:
                 resultado = {
                     "respuesta": 0,
-                    "errores": {"modelo_error": f"Error de conexión con el servicio: {str(e)}"}
+                    "errores": {"NIGUN_MODELO_RESPONDIO": f"Error de conexión con el servicio: {str(e)}"}
                 }
 
     # Handler de errores mejorado
@@ -167,7 +167,7 @@ if (enviado and pregunta) or texto_defecto:
         if isinstance(resultado, dict) and "errores" in resultado:
             errores = resultado.get("errores", {})
             if isinstance(errores, dict):
-                mensaje_error = errores.get("modelo_error", mensaje_error)
+                mensaje_error = errores.get("NIGUN_MODELO_RESPONDIO", mensaje_error)
             elif isinstance(errores, str):
                 mensaje_error = errores
 
