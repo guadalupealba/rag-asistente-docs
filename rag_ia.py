@@ -11,7 +11,8 @@ ruta_clave = ".secreto/claves_api.json"
 
 # Listas de modelos disponibles para cada proveedor
 modelos_gemini = ["gemini-3.5-flash", "gemini-3.1-flash-lite", "gemini-2.5-pro", "gemini-2.5-flash", "gemini-2.5-flash-lite", "gemini-3-flash-preview"]
-modelos_groq = ["llama-3.3-70b-versatile", "llama-3.1-8b-instant", "mixtral-8x7b-32768"]
+modelos_groq =  ["openai/gpt-oss-120b", "openai/gpt-oss-20b", "qwen/qwen3.8-27b", "allam-2-7b",]
+#["llama-3.3-70b-versatile", "llama-3.1-8b-instant", "mixtral-8x7b-32768"]
 
 modelo_de_embedding = "gemini-embedding-001"
 dimensiones_embedding = 768
@@ -428,13 +429,14 @@ def generar_respuesta(datos_entrada):
 		}
 
 if __name__ == "__main__":
-	print("="*10, "Iniciando conversación. Escribe '/salir' para terminar o '/tipo_ia' para cambiar de proveedor.", "="*10)
+	print("="*10, "Iniciando conversación. Escribe '/salir' para terminar, '/tipo_ia' para cambiar proveedor, o '/modelo' para cambiar modelo.", "="*10)
 
 	tipo_ia_actual = "gemini"
-	print(f"IA por defecto: {tipo_ia_actual}")
+	modelo_actual = None
+	print(f"IA por defecto: {tipo_ia_actual} | Modelo: {modelo_actual if modelo_actual else 'Automático'}")
 
 	while True:
-		pregunta_usuario = input(f"\n[{tipo_ia_actual}] ¿Qué onda? ⌨️>: ")
+		pregunta_usuario = input(f"\n[{tipo_ia_actual} | {modelo_actual if modelo_actual else 'auto'}] ¿Qué onda? ⌨️>: ")
 
 		if pregunta_usuario.lower() == '/salir':
 			print('(⁠•⁠‿⁠•⁠)' *20)
@@ -444,19 +446,41 @@ if __name__ == "__main__":
 			nuevo_tipo = input("Elige el proveedor [gemini/groq]: ").strip().lower()
 			if nuevo_tipo in ["gemini", "groq"]:
 				tipo_ia_actual = nuevo_tipo
-				print(f"[(⁠ ͡⁠◉⁠ ͜⁠ ⁠ʖ⁠ ͡⁠◉⁠)] Proveedor cambiado a: {tipo_ia_actual}")
+				modelo_actual = None # Reiniciar modelo al cambiar de proveedor
+				print(f"[(⁠ ͡⁠◉⁠ ͜⁠ ⁠ʖ⁠ ͡⁠◉⁠)] Proveedor cambiado a: {tipo_ia_actual} (modelo restablecido a automático)")
 			else:
 				print("[¯⁠\⁠_⁠(⁠ ͡⁠°⁠ ͜⁠ʖ⁠ ͡⁠°⁠)⁠_⁠/⁠¯] Proveedor inválido. Se mantiene el actual:", tipo_ia_actual)
 			continue
 
+		if pregunta_usuario.lower() == '/modelo':
+			print(f"Modelos de referencia de {tipo_ia_actual}:")
+			if tipo_ia_actual == "gemini":
+				print(f"(⁠*⁠❛⁠‿⁠❛⁠)☞", ", ".join(modelos_gemini))
+			else:
+				print(f"(⁠*⁠❛⁠‿⁠❛⁠)☞", ", ".join(modelos_groq))
+
+			nuevo_modelo = input("Ingresa el nombre del modelo (o presiona ENTRAR para automático): ").strip()
+			if nuevo_modelo:
+				modelo_actual = nuevo_modelo
+				print(f"[(⁠ ͡⁠°⁠ ͜⁠ʖ⁠ ͡⁠°⁠)] Modelo establecido a: {modelo_actual}")
+			else:
+				modelo_actual = None
+				print("[(⁠ ͝⁠°⁠ ͜⁠ʖ͡⁠°⁠)] Modelo establecido a: Automático")
+			continue
+
 		historial_actual = cargar_memoria()
+
+		diccionario_modelo = {
+			"tipo": tipo_ia_actual
+		}
+		if modelo_actual:
+			diccionario_modelo["modelo"] = modelo_actual
+
 		datos_paquete = {
 			"pregunta": {
 				"texto": pregunta_usuario,
 				"historial": historial_actual,
-				"modelo_de_ia": {
-					"tipo": tipo_ia_actual
-				}
+				"modelo_de_ia": diccionario_modelo
 			}
 		}
 
@@ -468,4 +492,3 @@ if __name__ == "__main__":
 			print("✦Respuesta:", resultado["respuesta"]["texto"])
 			print("🌐Fuentes:", resultado["respuesta"]["fuentes"])
 			print("🤖Ia:", resultado["respuesta"]["modelo_de_ia"])
-
