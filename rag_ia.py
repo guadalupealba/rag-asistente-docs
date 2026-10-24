@@ -25,98 +25,42 @@ base_dato_config = {
 	"password": "rag1234",
 	}
 
-# Cargar las claves de la API o solicitarlas interactivamente
+# Cargar las claves de la API desde el archivo JSON
 def obtener_claves_api():
 	"""
-	Lee las claves de la API (Gemini y Groq) desde un archivo JSON o las solicita interactivamente si no existen.
+	Lee las claves de la API (Gemini y Groq) desde un archivo JSON.
+	Si el archivo no existe, lo crea automáticamente con campos vacíos.
 	"""
 	datos = {}
-	if os.path.isfile(ruta_clave):
+	if not os.path.isfile(ruta_clave):
+		datos = {
+			"claves_gemini": "",
+			"claves_groq": ""
+		}
+		os.makedirs(os.path.dirname(ruta_clave), exist_ok=True)
+		with open(ruta_clave, "w", encoding="utf-8") as archivo:
+			json.dump(datos, archivo, indent=4, ensure_ascii=False)
+	else:
 		with open(ruta_clave, "r", encoding="utf-8") as archivo:
 			try:
 				datos = json.load(archivo)
 			except json.JSONDecodeError:
 				datos = {}
 
-	# Verificar o pedir clave de Gemini
 	clave_gemini = datos.get("claves_gemini", "")
 	if not clave_gemini or clave_gemini == "<tu clave API aquí>" or clave_gemini == "<tu clave API hier>":
-		print(f"\n[!] No se encontró o está sin configurar la clave de Gemini en {ruta_clave}")
-		clave_gemini = input("Por favor, ingresa tu clave API de Gemini: ").strip()
-		datos["claves_gemini"] = clave_gemini
+		clave_gemini = None
 
-	# Verificar o pedir clave de Groq
 	clave_groq = datos.get("claves_groq", "")
 	if not clave_groq or clave_groq == "<tu clave API aquí>" or clave_groq == "<tu clave API hier>":
-		print(f"\n[!] No se encontró o está sin configurar la clave de Groq en {ruta_clave}")
-		clave_groq = input("Por favor, ingresa tu clave API de Groq: ").strip()
-		datos["claves_groq"] = clave_groq
-
-	# Guardar ambas claves actualizadas
-	os.makedirs(os.path.dirname(ruta_clave), exist_ok=True)
-	with open(ruta_clave, "w", encoding="utf-8") as archivo:
-		json.dump(datos, archivo, indent=4, ensure_ascii=False)
+		clave_groq = None
 
 	return clave_gemini, clave_groq
 
-# Inicializar clientes
+# Inicializar clientes de forma segura
 clave_gem, clave_grq = obtener_claves_api()
-cliente_gemini = genai.Client(api_key=clave_gem)
-cliente_groq = Groq(api_key=clave_grq)
-
-def verificar_y_actualizar_clave_gemini(error):
-	"""
-	Verifica si un error de Gemini corresponde a una clave API inválida.
-	"""
-	error_str = str(error)
-	es_error_api_key = (
-		"API_KEY_INVALID" in error_str.upper() or
-		("400" in error_str and "INVALID_ARGUMENT" in error_str.upper() and "API_KEY" in error_str.upper()) or
-		hasattr(error, "status_code") and getattr(error, "status_code", None) == 400 and "API_KEY_INVALID" in error_str or
-		"403" in error_str or "401" in error_str
-	)
-	
-	if es_error_api_key:
-		print("\n(⁠ ͡⁠°⁠ ͜⁠ʖ⁠ ͡⁠°⁠) La clave API de Gemini actual no es válida.")
-		nueva_clave = input("Por favor, ingresa una nueva clave API de Gemini válida: ").strip()
-		
-		with open(ruta_clave, "r", encoding="utf-8") as archivo:
-			datos = json.load(archivo)
-		datos["claves_gemini"] = nueva_clave
-		with open(ruta_clave, "w", encoding="utf-8") as archivo:
-			json.dump(datos, archivo, indent=4, ensure_ascii=False)
-		
-		global cliente_gemini
-		cliente_gemini = genai.Client(api_key=nueva_clave)
-		print("Clave de Gemini actualizada correctamente.")
-		return True
-	return False
-
-def verificar_y_actualizar_clave_groq(error):
-	"""
-	Verifica si un error de Groq corresponde a una clave API inválida.
-	"""
-	error_str = str(error)
-	es_error_api_key = (
-		"API_KEY_INVALID" in error_str.upper() or
-		"401" in error_str or "UNAUTHORIZED" in error_str.upper() or "INVALID_API_KEY" in error_str.upper()
-	)
-	
-	if es_error_api_key:
-		print("\n(⁠ ͡⁠°⁠ ͜⁠ʖ⁠ ͡⁠°⁠) La clave API de Groq actual no es válida.")
-		nueva_clave = input("Por favor, ingresa una nueva clave API de Groq válida: ").strip()
-		
-		with open(ruta_clave, "r", encoding="utf-8") as archivo:
-			json.load(archivo)
-		datos["claves_groq"] = nueva_clave
-		with open(ruta_clave, "w", encoding="utf-8") as archivo:
-			json.dump(datos, archivo, indent=4, ensure_ascii=False)
-		
-		global cliente_groq
-		cliente_groq = Groq(api_key=nueva_clave)
-		print("Clave de Groq actualizada correctamente.")
-		return True
-	return False
+cliente_gemini = genai.Client(api_key=clave_gem) if clave_gem else None
+cliente_groq = Groq(api_key=clave_grq) if clave_grq else None
 
 # Cargar la memoria local de la IA 
 def cargar_memoria():
@@ -143,20 +87,19 @@ def generar_embedding_consulta(texto):
 	"""
 	Genera el embedding para la consulta del usuario usando Gemini.
 	"""
-	try:
-		resultado = cliente_gemini.models.embed_content(
-			model=modelo_de_embedding,
-			contents=texto,
-			config=EmbedContentConfig(
-				task_type="RETRIEVAL_QUERY",
-				output_dimensionality=dimensiones_embedding,
-				),
-			)
-		return resultado.embeddings[0].values
-	except Exception as error:
-		if verificar_y_actualizar_clave_gemini(error):
-			return generar_embedding_consulta(texto)
-		raise error
+	if not cliente_gemini:
+		print("Clave API Gemini n'existe pas")
+		raise ValueError("CLAVES_API_GEMINI_INEXISTANT")
+
+	resultado = cliente_gemini.models.embed_content(
+		model=modelo_de_embedding,
+		contents=texto,
+		config=EmbedContentConfig(
+			task_type="RETRIEVAL_QUERY",
+			output_dimensionality=dimensiones_embedding,
+			),
+		)
+	return resultado.embeddings[0].values
 
 def buscar_contexto_relevante(embedding, limite=3):
 	"""
@@ -188,7 +131,6 @@ def generar_respuesta(datos_entrada):
 	Recibe un diccionario con estructura: {"pregunta": {"texto": "...", "historial": [...], "modelo_de_ia": {"tipo": "gemini|groq", "modelo": "..."}}}
 	Devuelve un diccionario estructurado con respuesta, fuentes, modelo de IA y posibles errores.
 	"""
-	global cliente_gemini, cliente_groq
 	datos_pregunta = datos_entrada.get("pregunta", {})
 	pregunta = datos_pregunta.get("texto", "")
 	historial_externo = datos_pregunta.get("historial", [])
@@ -197,15 +139,77 @@ def generar_respuesta(datos_entrada):
 	tipo_ia = config_modelo.get("tipo", "gemini").lower()
 	modelo_solicitado = config_modelo.get("modelo")
 
+	# Validación previa de existencia de cliente según el tipo
+	if tipo_ia == "groq" and not cliente_groq:
+		print("Clave API Groq n'existe pas")
+		return {
+			"respuesta": {
+				"texto": 0,
+				"fuentes": 0,
+				"modelo_de_ia": {
+					"tipo": "groq",
+					"modelo": modelo_solicitado or 0
+				},
+				"errores": {
+					"CLAVES_API_GROQ_INEXISTANT": "Ningún claves API detectado para Groq"
+				}
+			}
+		}
+
+	if tipo_ia == "gemini" and not cliente_gemini:
+		print("Clave API Gemini n'existe pas")
+		return {
+			"respuesta": {
+				"texto": 0,
+				"fuentes": 0,
+				"modelo_de_ia": {
+					"tipo": "gemini",
+					"modelo": modelo_solicitado or 0
+				},
+				"errores": {
+					"CLAVES_API_GEMINI_INEXISTANT": "Ningún claves API detectado para Gemini"
+				}
+			}
+		}
+
 	# 1. Generar embedding y buscar contexto relevante
 	print("Buscando información de soporte...")
 	try:
 		embedding = generar_embedding_consulta(pregunta)
+	except ValueError as ve:
+		if str(ve) == "CLAVES_API_GEMINI_INEXISTANT":
+			return {
+				"respuesta": {
+					"texto": 0,
+					"fuentes": 0,
+					"modelo_de_ia": {
+						"tipo": "gemini",
+						"modelo": modelo_solicitado or 0
+					},
+					"errores": {
+						"CLAVES_API_GEMINI_INEXISTANT": "Ningún claves API detectado para Gemini"
+					}
+				}
+			}
+		raise ve
 	except Exception as error:
-		if verificar_y_actualizar_clave_gemini(error):
-			embedding = generar_embedding_consulta(pregunta)
-		else:
-			raise error
+		error_str = str(error)
+		if "403" in error_str or "401" in error_str or "API_KEY" in error_str.upper() or "INVALID" in error_str.upper():
+			print("Clave API Gemini n'existe pas")
+			return {
+				"respuesta": {
+					"texto": 0,
+					"fuentes": 0,
+					"modelo_de_ia": {
+						"tipo": "gemini",
+						"modelo": modelo_solicitado or 0
+					},
+					"errores": {
+						"CLAVES_API_GEMINI_INEXISTANT": "Ningún claves API detectado para Gemini"
+					}
+				}
+			}
+		raise error
 
 	fragmentos = buscar_contexto_relevante(embedding)
 
@@ -239,7 +243,6 @@ def generar_respuesta(datos_entrada):
 	if tipo_ia == "groq":
 		lista_de_modelos = [modelo_solicitado] if modelo_solicitado else modelos_groq
 		
-		# Groq espera el historial en formato [{"role": "user", "content": "..."}, ...]
 		historial_groq = []
 		for mensaje in historial_externo:
 			rol = "assistant" if mensaje["rol"] == "model" else mensaje["rol"]
@@ -260,8 +263,22 @@ def generar_respuesta(datos_entrada):
 				break
 			except Exception as error:
 				error_str = str(error)
-				if verificar_y_actualizar_clave_groq(error):
-					return generar_respuesta(datos_entrada)
+				
+				if "401" in error_str or "UNAUTHORIZED" in error_str.upper() or "INVALID" in error_str.upper() or "API_KEY" in error_str.upper():
+					print("Clave API Groq n'existe pas")
+					return {
+						"respuesta": {
+							"texto": 0,
+							"fuentes": 0,
+							"modelo_de_ia": {
+								"tipo": "groq",
+								"modelo": nombre_modelo
+							},
+							"errores": {
+								"CLAVES_API_GROQ_INEXISTANT": "Ningún claves API detectado para Groq"
+							}
+						}
+					}
 
 				if "404" in error_str or "NOT_FOUND" in error_str.upper():
 					return {
@@ -324,8 +341,21 @@ def generar_respuesta(datos_entrada):
 			except Exception as error:
 				error_str = str(error)
 				
-				if verificar_y_actualizar_clave_gemini(error):
-					return generar_respuesta(datos_entrada)
+				if "403" in error_str or "401" in error_str or "API_KEY" in error_str.upper() or "INVALID" in error_str.upper():
+					print("Clave API Gemini n'existe pas")
+					return {
+						"respuesta": {
+							"texto": 0,
+							"fuentes": 0,
+							"modelo_de_ia": {
+								"tipo": "gemini",
+								"modelo": nombre_modelo
+							},
+							"errores": {
+								"CLAVES_API_GEMINI_INEXISTANT": "Ningún claves API detectado para Gemini"
+							}
+						}
+					}
 
 				if "404" in error_str or "NOT_FOUND" in error_str.upper():
 					return {
@@ -403,7 +433,6 @@ if __name__ == "__main__":
 			print('⁠(⁠ ⁠ ⁠•⁠ ⁠‿⁠ ⁠•⁠ ⁠ ⁠)' *20)
 			break
 		
-		# Preguntar opcionalmente el proveedor en el CLI de prueba
 		proveedor = input("Proveedor [gemini/groq] (por defecto gemini): ").strip().lower()
 		if not proveedor:
 			proveedor = "gemini"
