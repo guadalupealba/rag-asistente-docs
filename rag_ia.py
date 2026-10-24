@@ -28,7 +28,7 @@ base_dato_config = {
 # Cargar las claves de la API desde el archivo JSON
 def obtener_claves_api():
 	"""
-	Lee las claves de la API (Gemini y Groq) desde un archivo JSON.
+	Lee las claves de la API (Gemini y Groq) desde el archivo JSON.
 	Si el archivo no existe, lo crea automáticamente con campos vacíos.
 	"""
 	datos = {}
@@ -40,6 +40,7 @@ def obtener_claves_api():
 		os.makedirs(os.path.dirname(ruta_clave), exist_ok=True)
 		with open(ruta_clave, "w", encoding="utf-8") as archivo:
 			json.dump(datos, archivo, indent=4, ensure_ascii=False)
+		return None, None
 	else:
 		with open(ruta_clave, "r", encoding="utf-8") as archivo:
 			try:
@@ -57,12 +58,12 @@ def obtener_claves_api():
 
 	return clave_gemini, clave_groq
 
-# Inicializar clientes de forma segura
-clave_gem, clave_grq = obtener_claves_api()
-cliente_gemini = genai.Client(api_key=clave_gem) if clave_gem else None
-cliente_groq = Groq(api_key=clave_grq) if clave_grq else None
+# Inicializar clientes
+clave_gemini, clave_groq = obtener_claves_api()
+cliente_gemini = genai.Client(api_key=clave_gemini) if clave_gemini else None
+cliente_groq = Groq(api_key=clave_groq) if clave_groq else None
 
-# Cargar la memoria local de la IA 
+# Cargar la memoria local de la IA
 def cargar_memoria():
 	"""
 	Carga el historial de conversaciones desde el archivo JSON.
@@ -88,8 +89,8 @@ def generar_embedding_consulta(texto):
 	Genera el embedding para la consulta del usuario usando Gemini.
 	"""
 	if not cliente_gemini:
-		print("Clave API Gemini n'existe pas")
-		raise ValueError("CLAVES_API_GEMINI_INEXISTANT")
+		print("Clave API Gemini no encontrada.")
+		raise ValueError("CLAVES_API_GEMINI_INEXISTANTES")
 
 	resultado = cliente_gemini.models.embed_content(
 		model=modelo_de_embedding,
@@ -103,7 +104,7 @@ def generar_embedding_consulta(texto):
 
 def buscar_contexto_relevante(embedding, limite=3):
 	"""
-	Busca los fragmentos más relevantes en PostgreSQL usando distancia coseno con pgvector.
+	Busca los fragmentos más relevantes en PostgreSQL.
 	"""
 	try:
 		conexion = psycopg2.connect(**base_dato_config)
@@ -135,13 +136,12 @@ def generar_respuesta(datos_entrada):
 	pregunta = datos_pregunta.get("texto", "")
 	historial_externo = datos_pregunta.get("historial", [])
 	config_modelo = datos_pregunta.get("modelo_de_ia", {})
-	
 	tipo_ia = config_modelo.get("tipo", "gemini").lower()
 	modelo_solicitado = config_modelo.get("modelo")
 
-	# Validación previa de existencia de cliente según el tipo
+	# Validación previa de existencia de clave (Inexistente)
 	if tipo_ia == "groq" and not cliente_groq:
-		print("Clave API Groq n'existe pas")
+		print("Clave API Groq no encontrada.")
 		return {
 			"respuesta": {
 				"texto": 0,
@@ -151,13 +151,13 @@ def generar_respuesta(datos_entrada):
 					"modelo": modelo_solicitado or 0
 				},
 				"errores": {
-					"CLAVES_API_GROQ_INEXISTANT": "Ningún claves API detectado para Groq"
+					"CLAVES_API_GROQ_INEXISTANTES": "Ninguna clave API detectada para Groq"
 				}
 			}
 		}
 
 	if tipo_ia == "gemini" and not cliente_gemini:
-		print("Clave API Gemini n'existe pas")
+		print("Clave API Gemini no encontrada.")
 		return {
 			"respuesta": {
 				"texto": 0,
@@ -167,17 +167,17 @@ def generar_respuesta(datos_entrada):
 					"modelo": modelo_solicitado or 0
 				},
 				"errores": {
-					"CLAVES_API_GEMINI_INEXISTANT": "Ningún claves API detectado para Gemini"
+					"CLAVES_API_GEMINI_INEXISTANTES": "Ninguna clave API detectada para Gemini"
 				}
 			}
 		}
 
-	# 1. Generar embedding y buscar contexto relevante
+	# Generar embedding y buscar contexto relevante
 	print("Buscando información de soporte...")
 	try:
 		embedding = generar_embedding_consulta(pregunta)
 	except ValueError as ve:
-		if str(ve) == "CLAVES_API_GEMINI_INEXISTANT":
+		if str(ve) == "CLAVES_API_GEMINI_INEXISTANTES":
 			return {
 				"respuesta": {
 					"texto": 0,
@@ -187,15 +187,16 @@ def generar_respuesta(datos_entrada):
 						"modelo": modelo_solicitado or 0
 					},
 					"errores": {
-						"CLAVES_API_GEMINI_INEXISTANT": "Ningún claves API detectado para Gemini"
+						"CLAVES_API_GEMINI_INEXISTANTES": "Ninguna clave API detectada para Gemini"
 					}
 				}
 			}
 		raise ve
 	except Exception as error:
 		error_str = str(error)
-		if "403" in error_str or "401" in error_str or "API_KEY" in error_str.upper() or "INVALID" in error_str.upper():
-			print("Clave API Gemini n'existe pas")
+		# Detección de clave API inválida para Gemini (ej. 400 API_KEY_INVALID)
+		if "API_KEY_INVALID" in error_str.upper() or ("400" in error_str and "INVALID_ARGUMENT" in error_str.upper() and "API_KEY" in error_str.upper()) or "403" in error_str or "401" in error_str:
+			print("Clave API Gemini inválida.")
 			return {
 				"respuesta": {
 					"texto": 0,
@@ -205,7 +206,7 @@ def generar_respuesta(datos_entrada):
 						"modelo": modelo_solicitado or 0
 					},
 					"errores": {
-						"CLAVES_API_GEMINI_INEXISTANT": "Ningún claves API detectado para Gemini"
+						"CLAVE_API_INVALIDA": "Clave API Gemini inválida"
 					}
 				}
 			}
@@ -213,7 +214,7 @@ def generar_respuesta(datos_entrada):
 
 	fragmentos = buscar_contexto_relevante(embedding)
 
-	# 2. Construir el contexto para el prompt
+	# Construir el contexto para el prompt
 	contexto = ""
 	fuentes_utilizadas = []
 	contexto_lista = []
@@ -225,7 +226,7 @@ def generar_respuesta(datos_entrada):
 				fuentes_utilizadas.append(fuente)
 	contexto = "\n".join(contexto_lista)
 
-	# 3. Crear el prompt final inyectando el contexto si existe
+	# Crear el prompt final inyectando el contexto si existe
 	if contexto:
 		pregunta_con_contexto = (
 			f"Utiliza la siguiente información de contexto para responder la pregunta del usuario de manera precisa.\n"
@@ -236,13 +237,13 @@ def generar_respuesta(datos_entrada):
 	else:
 		pregunta_con_contexto = pregunta
 
-	# 4. Procesar según el proveedor (Gemini o Groq)
+	# Procesar según el proveedor (Gemini o Groq)
 	respuesta_final = None
 	modelo_usado = 0
 
 	if tipo_ia == "groq":
 		lista_de_modelos = [modelo_solicitado] if modelo_solicitado else modelos_groq
-		
+
 		historial_groq = []
 		for mensaje in historial_externo:
 			rol = "assistant" if mensaje["rol"] == "model" else mensaje["rol"]
@@ -263,9 +264,10 @@ def generar_respuesta(datos_entrada):
 				break
 			except Exception as error:
 				error_str = str(error)
-				
+
+				# Detección de clave API inválida para Groq
 				if "401" in error_str or "UNAUTHORIZED" in error_str.upper() or "INVALID" in error_str.upper() or "API_KEY" in error_str.upper():
-					print("Clave API Groq n'existe pas")
+					print("Clave API Groq inválida.")
 					return {
 						"respuesta": {
 							"texto": 0,
@@ -275,7 +277,7 @@ def generar_respuesta(datos_entrada):
 								"modelo": nombre_modelo
 							},
 							"errores": {
-								"CLAVES_API_GROQ_INEXISTANT": "Ningún claves API detectado para Groq"
+								"CLAVE_API_INVALIDA": "Clave API Groq inválida"
 							}
 						}
 					}
@@ -340,9 +342,10 @@ def generar_respuesta(datos_entrada):
 				break
 			except Exception as error:
 				error_str = str(error)
-				
-				if "403" in error_str or "401" in error_str or "API_KEY" in error_str.upper() or "INVALID" in error_str.upper():
-					print("Clave API Gemini n'existe pas")
+
+				# Detección de clave API inválida para Gemini
+				if "API_KEY_INVALID" in error_str.upper() or ("400" in error_str and "INVALID_ARGUMENT" in error_str.upper() and "API_KEY" in error_str.upper()) or "403" in error_str or "401" in error_str:
+					print("Clave API Gemini inválida.")
 					return {
 						"respuesta": {
 							"texto": 0,
@@ -352,7 +355,7 @@ def generar_respuesta(datos_entrada):
 								"modelo": nombre_modelo
 							},
 							"errores": {
-								"CLAVES_API_GEMINI_INEXISTANT": "Ningún claves API detectado para Gemini"
+								"CLAVE_API_INVALIDA": "Clave API Gemini inválida"
 							}
 						}
 					}
@@ -371,7 +374,7 @@ def generar_respuesta(datos_entrada):
 							}
 						}
 					}
-				
+
 				if "429" in error_str or "RESOURCE_EXHAUSTED" in error_str.upper():
 					print(f"Límite de tokens alcanzado con {nombre_modelo}. Intentando con el siguiente...")
 					if nombre_modelo == lista_de_modelos[-1]:
@@ -389,7 +392,7 @@ def generar_respuesta(datos_entrada):
 							}
 						}
 					continue
-				
+
 				print(f"Error con Gemini ({nombre_modelo}): {error}. Intentando con el siguiente...")
 				continue
 
@@ -397,7 +400,7 @@ def generar_respuesta(datos_entrada):
 		# Guardamos en la memoria local el mensaje original (sin contexto)
 		historial_guardar = historial_externo + [{"rol": "user", "contenido": pregunta}, {"rol": "model", "contenido": respuesta_final}]
 		guardar_memoria(historial_guardar)
-		
+
 		diccionario_fuentes = {str(i + 1): fuente for i, fuente in enumerate(fuentes_utilizadas)} if fuentes_utilizadas else 0
 		return {
 			"respuesta": {
@@ -419,23 +422,32 @@ def generar_respuesta(datos_entrada):
 					"modelo": modelo_usado
 				},
 				"errores": {
-					"modelo_error": "No se pudo generar una respuesta con ninguno de los modelos disponibles."
+					"NINGUN_MODELO_RESPONDIO": "No se pudo generar una respuesta con ninguno de los modelos disponibles."
 				}
 			}
 		}
 
 if __name__ == "__main__":
-	print("="*10, "Iniciando conversación con la IA multi-proveedor (RAG habilitado). Escribe '.salir' para terminar.", "="*10)
+	print("="*10, "Iniciando conversación. Escribe '/salir' para terminar o '/tipo_ia' para cambiar de proveedor.", "="*10)
+
+	tipo_ia_actual = "gemini"
+	print(f"IA por defecto: {tipo_ia_actual}")
 
 	while True:
-		pregunta_usuario = input("\n¿Qué onda? ⌨️>: ")
-		if pregunta_usuario.lower() == '.salir':
-			print('⁠(⁠ ⁠ ⁠•⁠ ⁠‿⁠ ⁠•⁠ ⁠ ⁠)' *20)
+		pregunta_usuario = input(f"\n[{tipo_ia_actual}] ¿Qué onda? ⌨️>: ")
+
+		if pregunta_usuario.lower() == '/salir':
+			print('(⁠•⁠‿⁠•⁠)' *20)
 			break
-		
-		proveedor = input("Proveedor [gemini/groq] (por defecto gemini): ").strip().lower()
-		if not proveedor:
-			proveedor = "gemini"
+
+		if pregunta_usuario.lower() == '/tipo_ia':
+			nuevo_tipo = input("Elige el proveedor [gemini/groq]: ").strip().lower()
+			if nuevo_tipo in ["gemini", "groq"]:
+				tipo_ia_actual = nuevo_tipo
+				print(f"[(⁠ ͡⁠◉⁠ ͜⁠ ⁠ʖ⁠ ͡⁠◉⁠)] Proveedor cambiado a: {tipo_ia_actual}")
+			else:
+				print("[¯⁠\⁠_⁠(⁠ ͡⁠°⁠ ͜⁠ʖ⁠ ͡⁠°⁠)⁠_⁠/⁠¯] Proveedor inválido. Se mantiene el actual:", tipo_ia_actual)
+			continue
 
 		historial_actual = cargar_memoria()
 		datos_paquete = {
@@ -443,11 +455,11 @@ if __name__ == "__main__":
 				"texto": pregunta_usuario,
 				"historial": historial_actual,
 				"modelo_de_ia": {
-					"tipo": proveedor
+					"tipo": tipo_ia_actual
 				}
 			}
 		}
-		
+
 		resultado = generar_respuesta(datos_paquete)
 
 		if "errores" in resultado["respuesta"]:
@@ -455,4 +467,5 @@ if __name__ == "__main__":
 		else:
 			print("✦Respuesta:", resultado["respuesta"]["texto"])
 			print("🌐Fuentes:", resultado["respuesta"]["fuentes"])
-			print("🤖Modelo:", resultado["respuesta"]["modelo_de_ia"])
+			print("🤖Ia:", resultado["respuesta"]["modelo_de_ia"])
+
